@@ -5,5 +5,8 @@ package gol;
  */
 public enum Species {
 	A,
+	B,
+	C,
+	D,
 	NONE
 }

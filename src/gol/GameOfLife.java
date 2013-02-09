@@ -3,6 +3,7 @@ package gol;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.Random;
 
 import javax.swing.SwingUtilities;
 
@@ -14,26 +15,45 @@ import gol.ui.GridListener;
  * Conway's Game of Life simulator!
  */
 public class GameOfLife {
-	public static int GAME_SIZE = 24;
+	public static int GAME_SIZE = 128;
 	public static int BLOCK_SIZE = 512 / GameOfLife.GAME_SIZE;
 	public static int WINDOW_SIZE = GameOfLife.GAME_SIZE * GameOfLife.BLOCK_SIZE;
-	public static int STEP_DELAY = 75;
+	public static int STEP_DELAY = (int) (1.0/12.0 * 1000.0);
 	
 	private GameOfLifeFrame frame;
 	private Species[][] grid;
+	
 	private boolean running;
+	private boolean step;
+	private boolean reset;
+	private boolean fill;
 	
 	private Species[][] gridChanges;
 	
 	/**
-	 * Key listener for pausing the simulation.
+	 * Key listener for pausing the simulation and whatnot.
 	 */
-	private class PauseKeyListener implements KeyListener {
+	private class GameKeyListener implements KeyListener {
 		@Override
 		public void keyPressed(KeyEvent e) {
+			// Start/Pause the simulation when space is pressed.
 			if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-				// Pause!
 				GameOfLife.this.running = !GameOfLife.this.running;
+			}
+			
+			// Perform a simulation step if S is pressed.
+			if (e.getKeyCode() == KeyEvent.VK_S) {
+				GameOfLife.this.step = true;
+			}
+			
+			// Reset the game grid if R is pressed.
+			if (e.getKeyCode() == KeyEvent.VK_R) {
+				GameOfLife.this.reset = true;
+			}
+			
+			// Fill with random cells
+			if (e.getKeyCode() == KeyEvent.VK_F) {
+				GameOfLife.this.fill = true;
 			}
 		}
 		
@@ -55,10 +75,18 @@ public class GameOfLife {
 		public void eventOccured(GridEvent e) {
 			// Add a cell to where the user clicked if nothing is already there, otherwise remove
 			// it.
-			if (GameOfLife.this.grid[e.getX()][e.getY()] == Species.NONE) {
-				GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.A;
-			} else {
-				GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.NONE;
+			switch (GameOfLife.this.grid[e.getX()][e.getY()]) {
+				case NONE:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.A;
+					break;
+				
+				case A:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.B;
+					break;
+					
+				case B:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.NONE;
+					break;
 			}
 		}
 	}
@@ -72,10 +100,11 @@ public class GameOfLife {
 		
 		this.frame = new GameOfLifeFrame(GameOfLife.WINDOW_SIZE, GameOfLife.GAME_SIZE);
 		
-		this.frame.addKeyListener(new PauseKeyListener());
+		this.frame.addKeyListener(new GameKeyListener());
 		this.frame.getColorGrid().addGridListener(new GameGridListener());
 		
 		this.running = true;
+		this.step = false;
 		this.gameLoop();
 	}
 	
@@ -86,8 +115,8 @@ public class GameOfLife {
 	private Species[][] createEmptyGrid() {
 		Species[][] grid = new Species[GameOfLife.GAME_SIZE][GameOfLife.GAME_SIZE];
 		
-		for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
-			for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+		for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+			for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
 				grid[x][y] = Species.NONE;
 			}
 		}
@@ -102,17 +131,18 @@ public class GameOfLife {
 		// Loop while the game window is open -- this should matter too much as closing the window
 		// should kill the entire application.
 		while (this.frame.isShowing()) {
-			if (this.running) {
-				Species[][] newGrid = this.createEmptyGrid();
+			if (this.reset) {
+				this.resetGrid();
+				this.reset = false;
+			} else if (this.fill) {
+				this.fillGrid();
+				this.fill = false;
+			} else if (this.running || this.step) {
+				this.gameStep();
 				
-				// Loop through each block on the grid running the game rules.
-				for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
-					for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
-						this.runRules(newGrid, x, y);
-					}
+				if (this.step) {
+					this.step = false;
 				}
-				
-				this.grid = newGrid;
 			}
 			
 			this.applyGridChanges();
@@ -121,11 +151,51 @@ public class GameOfLife {
 	}
 	
 	/**
+	 * Runs a single game step.
+	 */
+	private void gameStep() {
+		Species[][] newGrid = this.createEmptyGrid();
+		
+		// Loop through each block on the grid running the game rules.
+		for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+			for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
+				this.runRules(newGrid, x, y);
+			}
+		}
+		
+		this.grid = newGrid;
+	}
+	
+	/**
+	 * Completely destroys and recreates the grid.
+	 */
+	private void resetGrid() {
+		this.grid = this.createEmptyGrid();
+	}
+	
+	/**
+	 * Resets the grid and fills it with random data.
+	 */
+	private void fillGrid() {
+		this.resetGrid();
+		
+		Random rand = new Random();
+		for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+			for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
+				if (rand.nextBoolean()) {
+					Species s = Species.values()[rand.nextInt(Species.values().length)];
+					this.grid[x][y] = s;
+				}
+			}
+		}
+	}
+	
+	/**
 	 * Merge changes from the user grid to the actual game grid because THREADS.
 	 */
 	private void applyGridChanges() {
-		for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
-			for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+		for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+			for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
 				if (this.gridChanges[x][y] != null) {
 					this.grid[x][y] = this.gridChanges[x][y];
 				}
@@ -162,7 +232,7 @@ public class GameOfLife {
 			}
 		} else {
 			if (n == 3) {
-				newGrid[x][y] = Species.A;
+				newGrid[x][y] = this.getMajorityNeighbhour(x, y);
 			}
 		}
 	}
@@ -200,6 +270,31 @@ public class GameOfLife {
 		return 8 - getNeighbours(x, y, Species.NONE);
 	}
 	
+	private Species getMajorityNeighbhour(int x, int y) {
+		Species majority = null;
+		int majorityN = -1;
+		
+		for (Species s : Species.values()) {
+			if (s != Species.NONE) {
+				int testN = getNeighbours(x, y, s);
+				
+				if (testN > majorityN) {
+					majority = s;
+					majorityN = testN;
+				} else if (testN == majorityN) {
+					Random rand = new Random();
+					boolean shouldSwap = rand.nextBoolean();
+					
+					if (shouldSwap) {
+						majority = s;
+					}
+				}
+			}
+		}
+		
+		return majority;
+	}
+	
 	/**
 	 * Returns a valid index number for the grid by wrapping around.
 	 * @param index Index to be wrapped.
@@ -217,14 +312,26 @@ public class GameOfLife {
 	private Color[][] getColorArray() {
 		final Color[][] colorGrid = new Color[GameOfLife.GAME_SIZE][GameOfLife.GAME_SIZE];
 		
-		for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
-			for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+		for (int y = 0; y < GameOfLife.GAME_SIZE; y++) {
+			for (int x = 0; x < GameOfLife.GAME_SIZE; x++) {
 				switch (this.grid[x][y]) {
 					case A:
 						colorGrid[x][y] = Color.ORANGE;
 						break;	
 						
-					case NONE:
+					case B:
+						colorGrid[x][y] = Color.CYAN;
+						break;
+						
+					case C:
+						colorGrid[x][y] = Color.WHITE;
+						break;
+						
+					case D:
+						colorGrid[x][y] = Color.MAGENTA;
+						break;
+						
+					default:
 						colorGrid[x][y] = Color.DARK_GRAY;
 						break;
 				}
