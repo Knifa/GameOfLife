@@ -8,5 +8,6 @@ public enum Species {
 	B,
 	C,
 	D,
+	E,
 	NONE
 }

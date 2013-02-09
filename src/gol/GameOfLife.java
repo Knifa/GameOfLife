@@ -16,9 +16,9 @@ import gol.ui.GridListener;
  */
 public class GameOfLife {
 	public static int GAME_SIZE = 128;
-	public static int BLOCK_SIZE = 512 / GameOfLife.GAME_SIZE;
+	public static int BLOCK_SIZE = 640 / GameOfLife.GAME_SIZE;
 	public static int WINDOW_SIZE = GameOfLife.GAME_SIZE * GameOfLife.BLOCK_SIZE;
-	public static int STEP_DELAY = (int) (1.0/12.0 * 1000.0);
+	public static int STEP_DELAY = (int) (1.0/18.0 * 1000.0);
 	
 	private GameOfLifeFrame frame;
 	private Species[][] grid;
@@ -85,6 +85,18 @@ public class GameOfLife {
 					break;
 					
 				case B:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.C;
+					break;
+					
+				case C:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.D;
+					break;
+				
+				case D:
+					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.E;
+					break;
+					
+				case E:
 					GameOfLife.this.gridChanges[e.getX()][e.getY()] = Species.NONE;
 					break;
 			}
@@ -221,11 +233,12 @@ public class GameOfLife {
 	 */
 	private void runRules(Species[][] newGrid, int x, int y) {
 		int n = getNeighbours(x, y);
+		int speciesN = getNeighbours(x, y, this.grid[x][y]);
 		
 		if (this.grid[x][y] != Species.NONE) {
-			if (n < 2) {
+			if (speciesN < 2) {
 				newGrid[x][y] = Species.NONE;
-			} else if (n > 3) {
+			} else if (speciesN > 3) {
 				newGrid[x][y] = Species.NONE;
 			} else {
 				newGrid[x][y] = this.grid[x][y];
@@ -331,6 +344,10 @@ public class GameOfLife {
 						colorGrid[x][y] = Color.MAGENTA;
 						break;
 						
+					case E:
+						colorGrid[x][y] = Color.GREEN;
+						break;
+						
 					default:
 						colorGrid[x][y] = Color.DARK_GRAY;
 						break;
@@ -347,7 +364,7 @@ public class GameOfLife {
 	 */
 	private void updateColorGrid() {
 		try {
-			SwingUtilities.invokeAndWait(new Runnable() {
+			SwingUtilities.invokeLater(new Runnable() {
 				@Override
 				public void run() {
 					frame.getColorGrid().setGrid(GameOfLife.this.getColorArray());

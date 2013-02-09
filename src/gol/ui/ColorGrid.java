@@ -54,14 +54,16 @@ public class ColorGrid extends JPanel {
 		
 		int rectSize = this.getRectSize();
 		for (int x = 0; x < this.gridSize; x++) {
-			for (int y = 0; y < this.gridSize; y++) {	
-				// Draw actual square.
-				g.setColor(this.grid[x][y]);
-				g.fillRect(x * rectSize, y * rectSize, rectSize, rectSize);
-				
-				// Draw grid lines.
-				g.setColor(Color.BLACK);
-				g.drawRect(x * rectSize, y * rectSize, rectSize, rectSize);
+			for (int y = 0; y < this.gridSize; y++) {
+				if (this.grid[x][y] != null) {
+					// Draw actual square.
+					g.setColor(this.grid[x][y]);
+					g.fillRect(x * rectSize, y * rectSize, rectSize, rectSize);
+					
+					// Draw grid lines.
+					g.setColor(this.grid[x][y].darker());
+					g.drawRect(x * rectSize, y * rectSize, rectSize - 1, rectSize - 1);
+				}
 			}
 		}
 	}
