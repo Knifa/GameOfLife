@@ -15,7 +15,7 @@ import gol.ui.GridListener;
  * Conway's Game of Life simulator!
  */
 public class GameOfLife {
-	public static int GAME_SIZE = 96;
+	public static int GAME_SIZE = 128;
 	public static int BLOCK_SIZE = 640 / GameOfLife.GAME_SIZE;
 	public static int WINDOW_SIZE = GameOfLife.GAME_SIZE * GameOfLife.BLOCK_SIZE;
 	public static int STEP_DELAY = (int) (1.0/16.0 * 1000.0);
@@ -31,70 +31,39 @@ public class GameOfLife {
 	private Species[][] gridChanges;
 	
 	/**
-	 * Key listener for pausing the simulation and whatnot.
-	 */
-	private class GameKeyListener implements KeyListener {
-		@Override
-		public void keyPressed(KeyEvent e) {
-			// Start/Pause the simulation when space is pressed.
-			if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-				GameOfLife.this.running = !GameOfLife.this.running;
-			}
-			
-			// Perform a simulation step if S is pressed.
-			if (e.getKeyCode() == KeyEvent.VK_S) {
-				GameOfLife.this.step = true;
-			}
-			
-			// Reset the game grid if R is pressed.
-			if (e.getKeyCode() == KeyEvent.VK_R) {
-				GameOfLife.this.reset = true;
-			}
-			
-			// Fill with random cells
-			if (e.getKeyCode() == KeyEvent.VK_F) {
-				GameOfLife.this.randomize = true;
-			}
-		}
-		
-		@Override
-		public void keyTyped(KeyEvent e) {}
-		@Override
-		public void keyReleased(KeyEvent e) {}
-	}
-	
-	/**
-	 * Grid listener for updating the grid when a user clicks on a particular square.
-	 * 
-	 * This will be called in the AWT thread so instead we specifically update another array, which
-	 * is then checked and merged at the end of the loop cycle otherwise everything goes a bit
-	 * weird and crazy.
-	 */
-	private class GameGridListener implements GridListener {
-		@Override
-		public void eventOccured(GridEvent e) {
-			GameOfLife.this.gridChanges[e.getX()][e.getY()] = 
-					GameOfLife.this.grid.getCoord(e.getX(), e.getY()).next();
-		}
-	}
-	
-	/**
 	 * Entry point for starting the simulation and whatnot.
 	 */
 	public void run() {
 		this.grid = new SpeciesGrid(GameOfLife.GAME_SIZE);
 		this.gridChanges = new Species[GameOfLife.GAME_SIZE][GameOfLife.GAME_SIZE];
 		
-		this.frame = new GameOfLifeFrame(GameOfLife.WINDOW_SIZE, GameOfLife.GAME_SIZE);
-		
-		this.frame.addKeyListener(new GameKeyListener());
-		this.frame.getColorGrid().addGridListener(new GameGridListener());
+		this.frame = new GameOfLifeFrame(this, GameOfLife.WINDOW_SIZE, GameOfLife.GAME_SIZE);
 		
 		this.running = true;
 		this.step = false;
 		this.gameLoop();
 	}
 	
+	public void step() {
+		this.step = true;	
+	}
+
+	public void toggleRunning() {
+		this.running = !this.running;		
+	}
+
+	public void resetGrid() {
+		this.reset = true;
+	}
+
+	public void registerGridChange(int x, int y, Species value) {
+		this.gridChanges[x][y] = value;
+	}
+
+	public SpeciesGrid getGrid() {
+		return this.grid;
+	}
+
 	/**
 	 * Main simulation loop. Loops forever as long as the window is showing.
 	 */
@@ -202,5 +171,9 @@ public class GameOfLife {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void randomizeGrid() {
+		this.randomize = true;		
 	}
 }
